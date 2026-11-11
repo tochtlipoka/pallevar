@@ -32,7 +32,7 @@ a{color:inherit}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .eyebrow{font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 24px;border-radius:999px;font-weight:700;text-decoration:none;border:0;cursor:pointer;transition:transform .15s ease}
+.btn{box-sizing:border-box;max-width:100%;text-align:center;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 24px;border-radius:999px;font-weight:700;text-decoration:none;border:0;cursor:pointer;transition:transform .15s ease}
 .btn:hover{transform:translateY(-2px)}
 .btn-green{background:var(--green);color:var(--white)}
 .btn-gold{background:var(--gold);color:var(--green-deep)}
@@ -189,6 +189,8 @@ textarea{min-height:80px;resize:vertical}
 .total{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--display);font-weight:800;font-size:30px;font-variant-numeric:tabular-nums}
 .total small{font-family:var(--body);font-size:13px;font-weight:600;color:#BFD9CC}
 .summary .btn{width:100%}
+#sumPlate{display:flex;justify-content:center}
+.sendhint{font-size:13.5px;font-weight:600;color:var(--gold);text-align:center;min-height:1em}
 .fine{font-size:12.5px;color:#BFD9CC}
 .copy{background:none;border:0;color:var(--gold);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:36px;padding:0}
 
@@ -371,6 +373,7 @@ footer a{color:var(--white)}
         <div class="sumrows" id="sumrows"></div>
         <div class="total"><small>Total</small><span id="total">€9.99</span></div>
         <a class="btn btn-gold" id="send" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp</a>
+        <p class="sendhint" id="sendHint" role="status"></p>
         <button type="button" class="copy" id="copy">Copiar mi pedido</button>
         <p class="fine">Pedidos hasta las 8:00 pm del día anterior (hora de Irlanda). Tu comida queda apartada al pagar. Usamos tu nombre y WhatsApp solo para gestionar tu pedido.</p>
       </aside>
@@ -574,6 +577,7 @@ function update(){
   $('total').textContent='€'+(o.qty*PRICE).toFixed(2);
   const bad=problems(o), btn=$('send');
   btn.setAttribute('aria-disabled',String(bad.length>0));
+  $('sendHint').textContent=bad.length?'Para enviar falta: '+bad.join(', ')+'.':'Listo para enviar.';
   btn.href=(WA_NUMBER?'https://wa.me/'+WA_NUMBER:'https://wa.me/')+'?text='+encodeURIComponent(message(o));
   $('err').textContent='';
 }
