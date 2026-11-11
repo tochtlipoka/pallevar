@@ -610,7 +610,7 @@ document.addEventListener('click',e=>{
   if(t.tagName==='BUTTON'){$('pedir').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 });
 
-function all(){W=week();$('heroPlate').innerHTML=plate((W.find(d=>d.open)||W[0]).dish,null,'big');renderWeek();renderDaily();fillDays();renderSides();update();}
+function all(){W=week();$('heroPlate').innerHTML=plate('albondigas',null,'big');renderWeek();renderDaily();fillDays();renderSides();update();}
 all();
 setInterval(()=>{const before=W.map(d=>d.open).join();W=week();if(W.map(d=>d.open).join()!==before){all();}else{renderDaily();}},30000);
 })();
