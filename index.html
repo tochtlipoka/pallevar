@@ -166,6 +166,14 @@ textarea{min-height:80px;resize:vertical}
 .sidesbox{display:flex;flex-direction:column;gap:12px}
 .platerow{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
 .platerow .pn{font-weight:700;font-size:13px;color:var(--muted);min-width:78px}
+.custbtn{appearance:none;background:none;border:1.5px dashed var(--line);border-radius:999px;min-height:46px;padding:0 16px;font-weight:600;color:var(--orange-deep);cursor:pointer}
+.custbtn[aria-expanded="true"]{border-style:solid;border-color:var(--orange-deep)}
+.custpanel{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;background:var(--sand);border-radius:16px}
+.pill.mini span{min-height:38px;padding:0 14px;font-size:14px;font-weight:500}
+.pill.mini input:checked + span{background:var(--orange-deep);border-color:var(--orange-deep);color:var(--white)}
+.inginfo{font-size:13px;color:var(--muted);line-height:1.6;margin-top:4px}
+.inginfo strong{color:var(--ink)}
+.card .alg{font-size:12px;font-weight:600;color:var(--orange-deep)}
 .qty{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--cream);align-self:flex-start}
 .qty button{width:48px;height:48px;border:0;background:none;font-size:22px;font-weight:700;cursor:pointer;color:var(--green)}
 .qty output{min-width:34px;text-align:center;font-family:var(--display);font-weight:800;font-size:20px}
@@ -330,6 +338,7 @@ footer a{color:var(--white)}
         <fieldset class="q" style="border:0;margin:0;padding:0;min-width:0">
           <legend class="lbl" style="padding:0;margin-bottom:10px">Elige 2 guarniciones <span class="hint" id="sideHint">· incluidas en el precio</span></legend>
           <div id="sidesBox" class="sidesbox"></div>
+          <p class="inginfo" id="ingInfo"></p>
         </fieldset>
         <fieldset class="q" style="border:0;margin:0;padding:0;min-width:0">
           <legend class="lbl" style="padding:0;margin-bottom:10px">¿A qué hora?</legend>
@@ -363,7 +372,7 @@ footer a{color:var(--white)}
         <div class="total"><small>Total</small><span id="total">€9.99</span></div>
         <a class="btn btn-gold" id="send" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp</a>
         <button type="button" class="copy" id="copy">Copiar mi pedido</button>
-        <p class="fine">Pedidos hasta las 8:00 pm del día anterior (hora de Irlanda). Tu comida queda apartada al pagar.</p>
+        <p class="fine">Pedidos hasta las 8:00 pm del día anterior (hora de Irlanda). Tu comida queda apartada al pagar. Usamos tu nombre y WhatsApp solo para gestionar tu pedido.</p>
       </aside>
     </div>
   </div>
@@ -408,13 +417,18 @@ const IMG=window.IMG;
 const PRICE=9.99;
 const WA_NUMBER='353899623818'; // Número de WhatsApp de Pa'llevar en formato internacional sin "+", p. ej. 353871234567
 const DISHES={
-  albondigas:{name:'Albóndigas en chipotle',desc:'Albóndigas de res en salsa de jitomate con chipotle, como las de la abuela.'},
-  picadillo:{name:'Picadillo',desc:'Carne molida guisada con papa, zanahoria y jitomate.'},
-  pollo:{name:'Pollo frito',desc:'Piezas de pollo empanizadas, crujientes por fuera y jugosas por dentro.'},
-  sandwich:{name:'Sándwich horneado',desc:'Pan horneado con jamón y queso gratinado, recién salido del horno.'},
-  huevos:{name:'Huevos con salchicha',desc:'Huevos estrellados con salchicha asada. El desayuno que se te antoja.'}
+  albondigas:{name:'Albóndigas en chipotle',desc:'Albóndigas de res en salsa de jitomate con chipotle, como las de la abuela.',ing:'Carne de res, pan molido, huevo, jitomate, chile chipotle, cebolla, ajo, cilantro',quitar:['cilantro'],alerg:['gluten','huevo']},
+  picadillo:{name:'Picadillo',desc:'Carne molida guisada con papa, zanahoria y jitomate.',ing:'Carne molida de res, papa, zanahoria, chícharo, jitomate, cebolla, ajo',quitar:['chícharo'],alerg:[]},
+  pollo:{name:'Pollo frito',desc:'Piezas de pollo empanizadas, crujientes por fuera y jugosas por dentro.',ing:'Pollo, harina de trigo, huevo, especias, aceite vegetal',quitar:[],alerg:['gluten','huevo']},
+  sandwich:{name:'Sándwich horneado',desc:'Pan horneado con jamón y queso gratinado, recién salido del horno.',ing:'Pan de caja, jamón, queso, jitomate, lechuga, mayonesa',quitar:['jitomate','lechuga','mayonesa'],alerg:['gluten','leche','huevo']},
+  huevos:{name:'Huevos con salchicha',desc:'Huevos estrellados con salchicha asada. El desayuno que se te antoja.',ing:'Huevo, salchicha de cerdo, tortilla de harina, jamón, queso',quitar:['jamón'],alerg:['huevo','gluten','leche']}
 };
 const SIDES={frijoles:'Frijoles',arroz:'Arroz',espagueti:'Espagueti'};
+const SIDE_INFO={
+  frijoles:{ing:'Frijol, cebolla, aceite vegetal, queso fresco',quitar:['queso'],alerg:['leche']},
+  arroz:{ing:'Arroz, jitomate, cebolla, zanahoria, chícharo, ajo',quitar:[],alerg:[]},
+  espagueti:{ing:'Pasta de trigo, crema, queso, mantequilla',quitar:['queso'],alerg:['gluten','leche']}
+};
 const MENU=['albondigas','picadillo','pollo','sandwich','huevos'];
 const DN=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MN=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -447,7 +461,7 @@ function renderWeek(){
   document.getElementById('week').innerHTML=W.map(d=>{
     const chip=d.today?'<span class="chip today">Hoy</span>':d===next?'<span class="chip next">Pide ya</span>':!d.open?'<span class="chip closed">Cerrado</span>':'';
     return `<article class="card ${!d.open&&!d.today?'past':''}">${plate(d.dish,null,'',DISHES[d.dish].name)}${chip}
-      <span class="day">${fd(d.date)}</span><h3>${DISHES[d.dish].name}</h3><p>${DISHES[d.dish].desc}</p>
+      <span class="day">${fd(d.date)}</span><h3>${DISHES[d.dish].name}</h3><p>${DISHES[d.dish].desc}</p><p class="alg">${DISHES[d.dish].alerg.length?'Contiene: '+DISHES[d.dish].alerg.join(', '):'Sin alérgenos principales'}</p>
       ${d.open?`<button class="go" type="button" data-pick="${d.i}">Pedir para este día</button>`:'<span class="day" style="margin-top:auto">Pedidos cerrados</span>'}</article>`;
   }).join('');
 }
@@ -484,15 +498,36 @@ function fillDays(){
   if(prev && open.some(d=>String(d.i)===prev)) sel.value=prev;
 }
 const SK=Object.keys(SIDES);
-let plates=[['frijoles','arroz']];
+const ORDER_ENDPOINT=''; // URL de la app web de Google Apps Script (ver automatizacion/README.md). Vacío = solo WhatsApp.
+let plates=[{s:['frijoles','arroz'],sin:[],open:false}];
+let orderId=newId();
+function newId(){const d=now(),p=n=>String(n).padStart(2,'0');return 'PL'+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'-'+Math.random().toString(36).slice(2,5).toUpperCase();}
+function curDish(){const d=W[Number($('f-day').value)];return d?d.dish:MENU[0];}
+function opts(p){const dish=curDish();return DISHES[dish].quitar.map(x=>({id:'d:'+x,label:'Sin '+x})).concat(p.s.flatMap(sid=>SIDE_INFO[sid].quitar.map(x=>({id:sid+':'+x,label:'Sin '+x+' en '+SIDES[sid].toLowerCase()}))));}
+function sinLabels(p){const o=opts(p);return p.sin.map(id=>(o.find(x=>x.id===id)||{}).label).filter(Boolean);}
+function allergens(p){const set=new Set(DISHES[curDish()].alerg);p.s.forEach(sid=>SIDE_INFO[sid].alerg.forEach(a=>set.add(a)));return [...set];}
 function renderSides(){
   const many=plates.length>1;
   $('sideHint').textContent=many?'· para cada comida, incluidas en el precio':'· incluidas en el precio';
-  $('sidesBox').innerHTML=plates.map((p,i)=>`<div class="platerow">${many?`<span class="pn">Comida ${i+1}</span>`:''}<div class="pills" role="group" aria-label="Guarniciones de la comida ${i+1}">${SK.map((id,j)=>{const on=p.includes(id);return `<label class="pill"><input type="checkbox" id="s-${i}-${id}" data-plate="${i}" value="${id}" ${on?'checked':''} ${!on&&p.length>=2?'disabled':''}><span><b>${'ABC'[j]}</b>${SIDES[id]}</span></label>`;}).join('')}</div></div>`).join('');
+  $('sidesBox').innerHTML=plates.map((p,i)=>{
+    const o=opts(p); p.sin=p.sin.filter(id=>o.some(x=>x.id===id));
+    const pills=SK.map((id,j)=>{const on=p.s.includes(id);return `<label class="pill"><input type="checkbox" id="s-${i}-${id}" data-plate="${i}" data-kind="side" value="${id}" ${on?'checked':''} ${!on&&p.s.length>=2?'disabled':''}><span><b>${'ABC'[j]}</b>${SIDES[id]}</span></label>`;}).join('');
+    const cust=o.length?`<button type="button" class="custbtn" id="c-${i}" data-cust="${i}" aria-expanded="${p.open}">${p.sin.length?'Personalizado ('+p.sin.length+')':'Personalizar'}</button>`:'';
+    const panel=o.length&&p.open?`<div class="custpanel" role="group" aria-label="Qué quitar de la comida ${i+1}">${o.map(x=>`<label class="pill mini"><input type="checkbox" id="q-${i}-${x.id.replace(/\W/g,'_')}" data-plate="${i}" data-kind="sin" value="${x.id}" ${p.sin.includes(x.id)?'checked':''}><span>${x.label}</span></label>`).join('')}</div>`:'';
+    return `<div class="platerow">${many?`<span class="pn">Comida ${i+1}</span>`:''}<div class="pills" role="group" aria-label="Guarniciones de la comida ${i+1}">${pills}</div>${cust}${panel}</div>`;
+  }).join('');
+  const a=new Set();plates.forEach(p=>allergens(p).forEach(x=>a.add(x)));
+  const d=DISHES[curDish()];
+  $('ingInfo').innerHTML=`<strong>Ingredientes del ${d.name.toLowerCase()}:</strong> ${d.ing}.<br><strong>Guarniciones:</strong> ${plates[0].s.map(sid=>SIDES[sid]+' ('+SIDE_INFO[sid].ing.toLowerCase()+')').join('; ')||'—'}.<br><strong>Alérgenos de tu pedido:</strong> ${a.size?[...a].join(', '):'ninguno de los 14 principales'}. <span class="hint">Ingredientes de ejemplo, por confirmar con la cocina.</span>`;
 }
-function sides(){return plates[0];}
-function combos(){const m=new Map();plates.forEach(p=>{const k=p.join('+');m.set(k,(m.get(k)||0)+1);});return [...m].map(([k,n])=>({n,s:k?k.split('+'):[]}));}
-$('sidesBox').addEventListener('change',e=>{const t=e.target;if(t.dataset.plate===undefined)return;const i=Number(t.dataset.plate);const p=t.checked?plates[i].concat(t.value):plates[i].filter(x=>x!==t.value);plates[i]=SK.filter(k=>p.includes(k));renderSides();const back=$(t.id);if(back)back.focus();});
+function sides(){return plates[0].s;}
+function combos(){const m=new Map();plates.forEach(p=>{const k=p.s.join('+')+'|'+p.sin.join(',');if(!m.has(k))m.set(k,{n:0,s:p.s.slice(),sin:sinLabels(p)});m.get(k).n++;});return [...m.values()];}
+$('sidesBox').addEventListener('change',e=>{const t=e.target;if(t.dataset.plate===undefined)return;const i=Number(t.dataset.plate),p=plates[i];
+  if(t.dataset.kind==='side'){const s2=t.checked?p.s.concat(t.value):p.s.filter(x=>x!==t.value);p.s=SK.filter(k=>s2.includes(k));}
+  else{p.sin=t.checked?p.sin.concat(t.value):p.sin.filter(x=>x!==t.value);}
+  renderSides();const back=$(t.id);if(back)back.focus();});
+$('sidesBox').addEventListener('click',e=>{const b=e.target.closest('[data-cust]');if(!b)return;const p=plates[Number(b.dataset.cust)];p.open=!p.open;renderSides();const back=$(b.id);if(back)back.focus();});
+$('f-day').addEventListener('change',()=>renderSides());
 function data(){
   const d=W[Number($('f-day').value)];
   const shift=document.querySelector('input[name=shift]:checked').value;
@@ -502,20 +537,28 @@ function data(){
 function problems(o){
   const p=[];
   if(!o.d) p.push('no hay días abiertos');
-  if(plates.some(x=>x.length!==2)) p.push(plates.length>1?'elige 2 guarniciones en cada comida':'elige 2 guarniciones');
+  if(plates.some(x=>x.s.length!==2)) p.push(plates.length>1?'elige 2 guarniciones en cada comida':'elige 2 guarniciones');
   if(!o.place) p.push('escribe el lugar de entrega');
   if(!o.name) p.push('escribe tu nombre');
   if(o.phone.replace(/\D/g,'').length<7) p.push('escribe tu WhatsApp');
   return p;
 }
+function comboText(c,o){return `${c.n} x ${o.d?DISHES[o.d.dish].name:'-'} con ${c.s.map(x=>SIDES[x].toLowerCase()).join(' y ')||'-'}${c.sin.length?' · '+c.sin.join(', ').toLowerCase():''}`;}
 function message(o){
   const t=o.shift==='m'?'Mañana 10:30':'Tarde 13:30';
-  return `Hola Pa'llevar, quiero hacer un pedido:\n\n`+
+  return `Hola Pa'llevar, quiero hacer un pedido (${orderId}):\n\n`+
     `Día: ${o.d?fd(o.d.date):'-'}\n`+
-    combos().map(c=>`${c.n} x ${o.d?DISHES[o.d.dish].name:'-'} con ${c.s.map(x=>SIDES[x].toLowerCase()).join(' y ')||'-'}`).join('\n')+'\n'+
+    combos().map(c=>comboText(c,o)).join('\n')+'\n'+
     `Entrega: ${t} · ${o.place||'-'}\n`+
     `Nombre: ${o.name||'-'}\nWhatsApp: ${o.phone||'-'}\n`+(o.notes?`Notas: ${o.notes}\n`:'')+
     `\nTotal: €${(o.qty*PRICE).toFixed(2)}`;
+}
+function payload(o){
+  const p2=n=>String(n).padStart(2,'0');
+  return {id:orderId,creado:new Date().toISOString(),fechaEntrega:o.d?o.d.date.getFullYear()+'-'+p2(o.d.date.getMonth()+1)+'-'+p2(o.d.date.getDate()):'',
+    platillo:o.d?DISHES[o.d.dish].name:'',platilloId:o.d?o.d.dish:'',turno:o.shift==='m'?'Mañana':'Tarde',hora:o.shift==='m'?'10:30':'13:30',
+    lugar:o.place,nombre:o.name,whatsapp:o.phone,notas:o.notes,total:+(o.qty*PRICE).toFixed(2),precio:PRICE,
+    comidas:plates.map(p=>({guarniciones:p.s.map(x=>SIDES[x]),guarnicionIds:p.s,sin:sinLabels(p)}))};
 }
 function update(){
   $('f-other').hidden=$('f-place').value!=='otro';
@@ -525,7 +568,8 @@ function update(){
     $('sumPlate').innerHTML=plate(o.d.dish,o.s,'','Tu plato: '+DISHES[o.d.dish].name);
   } else { $('f-dish').innerHTML='<div><strong>Pedidos cerrados</strong><span>El menú de la próxima semana sale el fin de semana.</span></div>'; $('sumPlate').innerHTML=''; }
   $('qty').textContent=qty;
-  const rows=[['Día',o.d?fd(o.d.date):'—'],['Plato',o.d?`${o.qty} × ${DISHES[o.d.dish].name}`:'—'],['Guarniciones',combos().map(c=>(plates.length>1?c.n+' × ':'')+(c.s.map(x=>SIDES[x]).join(' + ')||'faltan')).join(' · ')],['Entrega',(o.shift==='m'?'Mañana 10:30':'Tarde 13:30')],['Lugar',o.place||'—']];
+  const many=plates.length>1;
+  const rows=[['Día',o.d?fd(o.d.date):'—'],['Plato',o.d?`${o.qty} × ${DISHES[o.d.dish].name}`:'—'],['Guarniciones',combos().map(c=>(many?c.n+' × ':'')+(c.s.map(x=>SIDES[x]).join(' + ')||'faltan')+(c.sin.length?' ('+c.sin.join(', ').toLowerCase()+')':'')).join(' · ')],['Entrega',(o.shift==='m'?'Mañana 10:30':'Tarde 13:30')],['Lugar',o.place||'—']];
   $('sumrows').innerHTML=rows.map(([a,b])=>`<div><span>${a}</span><span>${b.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</span></div>`).join('');
   $('total').textContent='€'+(o.qty*PRICE).toFixed(2);
   const bad=problems(o), btn=$('send');
@@ -535,12 +579,15 @@ function update(){
 }
 $('form').addEventListener('input',update);
 $('form').addEventListener('change',update);
+$('sidesBox').addEventListener('click',()=>update());
 $('form').addEventListener('submit',e=>e.preventDefault());
-$('inc').addEventListener('click',()=>{if(qty<10){qty++;plates.push(plates[plates.length-1].slice());renderSides();}update();});
+$('inc').addEventListener('click',()=>{if(qty<10){qty++;const last=plates[plates.length-1];plates.push({s:last.s.slice(),sin:last.sin.slice(),open:false});renderSides();}update();});
 $('dec').addEventListener('click',()=>{if(qty>1){qty--;plates.pop();renderSides();}update();});
 $('send').addEventListener('click',e=>{
-  const bad=problems(data());
-  if(bad.length){e.preventDefault();$('err').textContent='Para mandar tu pedido falta: '+bad.join(', ')+'.';$('form').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}
+  const o=data(), bad=problems(o);
+  if(bad.length){e.preventDefault();$('err').textContent='Para mandar tu pedido falta: '+bad.join(', ')+'.';$('form').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});return;}
+  if(ORDER_ENDPOINT){try{navigator.sendBeacon(ORDER_ENDPOINT,JSON.stringify(payload(o)));}catch(err){}}
+  setTimeout(()=>{orderId=newId();update();},1500);
 });
 $('copy').addEventListener('click',()=>{
   const txt=message(data()), b=$('copy');
