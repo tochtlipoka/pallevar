@@ -23,7 +23,7 @@ const HOJA_PEDIDOS = 'Pedidos';
 const HOJA_RECETAS = 'Recetas';
 const HOJA_RESUMENES = 'Resúmenes';
 const COLS = ['Recibido', 'Pedido', 'Fecha entrega', 'Platillo', 'Comida #', 'Guarnición 1',
-  'Guarnición 2', 'Quitar', 'Turno', 'Hora', 'Lugar', 'Nombre', 'WhatsApp', 'Notas', 'Precio', 'Pago'];
+  'Guarnición 2', 'Guarnición 3', 'Quitar', 'Turno', 'Hora', 'Lugar', 'Nombre', 'WhatsApp', 'Notas', 'Precio', 'Pago'];
 
 /* ---------------- 1. Recibir pedidos ---------------- */
 function doPost(e) {
@@ -40,9 +40,9 @@ function doPost(e) {
     const t = s => String(s || '').slice(0, 300);
     const rows = o.comidas.map((c, i) => [
       ahora, t(o.id), "'" + o.fechaEntrega, t(o.platillo), i + 1,
-      t((c.guarniciones || [])[0]), t((c.guarniciones || [])[1]), t((c.sin || []).join(', ')),
+      t((c.guarniciones || [])[0]), t((c.guarniciones || [])[1]), t((c.guarniciones || [])[2]), t((c.sin || []).join(', ')),
       t(o.turno), "'" + t(o.hora), t(o.lugar), t(o.nombre), "'" + t(o.whatsapp), t(o.notas),
-      Number(o.precio) || 9.99, estado
+      Number(c.precio) || Number(o.precio) || 9.99, estado
     ]);
     const sh = hoja_(HOJA_PEDIDOS, COLS);
     sh.getRange(sh.getLastRow() + 1, 1, rows.length, COLS.length).setValues(rows);
@@ -82,7 +82,7 @@ function enviarResumen() {
   const guarn = {};
   turnos.forEach(tu => {
     validas.filter(r => r[C['Turno']] === tu).forEach(r => {
-      [r[C['Guarnición 1']], r[C['Guarnición 2']]].forEach(g => {
+      [r[C['Guarnición 1']], r[C['Guarnición 2']], r[C['Guarnición 3']]].forEach(g => {
         if (!g) return; guarn[g] = guarn[g] || { 'Mañana': 0, 'Tarde': 0 }; guarn[g][tu]++;
       });
     });
@@ -111,7 +111,7 @@ function enviarResumen() {
     return '<h3>' + tu + ' · ' + (delTurno[0][C['Hora']] || '') + '</h3>' +
       Object.keys(lugares).map(l => '<p><b>' + esc_(l) + ' (' + lugares[l] + ')</b><br>' +
         delTurno.filter(r => r[C['Lugar']] === l).map(r =>
-          esc_(r[C['Nombre']]) + ' — ' + esc_(r[C['Guarnición 1']]) + ' + ' + esc_(r[C['Guarnición 2']]) +
+          esc_(r[C['Nombre']]) + ' — ' + [r[C['Guarnición 1']], r[C['Guarnición 2']], r[C['Guarnición 3']]].filter(Boolean).map(esc_).join(' + ') +
           (r[C['Quitar']] ? ' · <i>' + esc_(r[C['Quitar']]) + '</i>' : '') +
           (r[C['Pago']] !== 'Pagado' ? ' <span style="color:#B3261E">[' + esc_(r[C['Pago']]) + ']</span>' : '')
         ).join('<br>') + '</p>').join('');
