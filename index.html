@@ -163,6 +163,9 @@ textarea{min-height:80px;resize:vertical}
 .pill input:checked + span b{background:var(--gold);color:var(--green-deep)}
 .pill input:focus-visible + span{outline:3px solid var(--gold);outline-offset:2px}
 .pill input:disabled + span{opacity:.4}
+.sidesbox{display:flex;flex-direction:column;gap:12px}
+.platerow{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap}
+.platerow .pn{font-weight:700;font-size:13px;color:var(--muted);min-width:78px}
 .qty{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--cream);align-self:flex-start}
 .qty button{width:48px;height:48px;border:0;background:none;font-size:22px;font-weight:700;cursor:pointer;color:var(--green)}
 .qty output{min-width:34px;text-align:center;font-family:var(--display);font-weight:800;font-size:20px}
@@ -320,18 +323,14 @@ footer a{color:var(--white)}
           <select id="f-day"></select>
           <div class="dishline" id="f-dish"></div>
         </div>
-        <fieldset class="q" style="border:0;margin:0;padding:0;min-width:0">
-          <legend class="lbl" style="padding:0;margin-bottom:10px">Elige 2 guarniciones <span class="hint">· incluidas en el precio</span></legend>
-          <div class="pills">
-            <label class="pill"><input type="checkbox" id="s-frijoles" name="side" value="frijoles" checked><span><b>A</b>Frijoles</span></label>
-            <label class="pill"><input type="checkbox" id="s-arroz" name="side" value="arroz" checked><span><b>B</b>Arroz</span></label>
-            <label class="pill"><input type="checkbox" id="s-espagueti" name="side" value="espagueti"><span><b>C</b>Espagueti</span></label>
-          </div>
-        </fieldset>
         <div class="q">
           <span class="lbl" id="qty-l">¿Cuántas comidas?</span>
           <div class="qty" role="group" aria-labelledby="qty-l"><button type="button" id="dec" aria-label="Una menos">−</button><output id="qty">1</output><button type="button" id="inc" aria-label="Una más">+</button></div>
         </div>
+        <fieldset class="q" style="border:0;margin:0;padding:0;min-width:0">
+          <legend class="lbl" style="padding:0;margin-bottom:10px">Elige 2 guarniciones <span class="hint" id="sideHint">· incluidas en el precio</span></legend>
+          <div id="sidesBox" class="sidesbox"></div>
+        </fieldset>
         <fieldset class="q" style="border:0;margin:0;padding:0;min-width:0">
           <legend class="lbl" style="padding:0;margin-bottom:10px">¿A qué hora?</legend>
           <div class="pills">
@@ -484,8 +483,16 @@ function fillDays(){
   sel.innerHTML=open.length?open.map(d=>`<option value="${d.i}">${fd(d.date)} · ${DISHES[d.dish].name}</option>`).join(''):'<option value="">No hay días abiertos esta semana</option>';
   if(prev && open.some(d=>String(d.i)===prev)) sel.value=prev;
 }
-function sides(){return [...document.querySelectorAll('input[name=side]:checked')].map(i=>i.value);}
-function lockSides(){const s=sides();document.querySelectorAll('input[name=side]').forEach(i=>{i.disabled=!i.checked&&s.length>=2;});}
+const SK=Object.keys(SIDES);
+let plates=[['frijoles','arroz']];
+function renderSides(){
+  const many=plates.length>1;
+  $('sideHint').textContent=many?'· para cada comida, incluidas en el precio':'· incluidas en el precio';
+  $('sidesBox').innerHTML=plates.map((p,i)=>`<div class="platerow">${many?`<span class="pn">Comida ${i+1}</span>`:''}<div class="pills" role="group" aria-label="Guarniciones de la comida ${i+1}">${SK.map((id,j)=>{const on=p.includes(id);return `<label class="pill"><input type="checkbox" id="s-${i}-${id}" data-plate="${i}" value="${id}" ${on?'checked':''} ${!on&&p.length>=2?'disabled':''}><span><b>${'ABC'[j]}</b>${SIDES[id]}</span></label>`;}).join('')}</div></div>`).join('');
+}
+function sides(){return plates[0];}
+function combos(){const m=new Map();plates.forEach(p=>{const k=p.join('+');m.set(k,(m.get(k)||0)+1);});return [...m].map(([k,n])=>({n,s:k?k.split('+'):[]}));}
+$('sidesBox').addEventListener('change',e=>{const t=e.target;if(t.dataset.plate===undefined)return;const i=Number(t.dataset.plate);const p=t.checked?plates[i].concat(t.value):plates[i].filter(x=>x!==t.value);plates[i]=SK.filter(k=>p.includes(k));renderSides();const back=$(t.id);if(back)back.focus();});
 function data(){
   const d=W[Number($('f-day').value)];
   const shift=document.querySelector('input[name=shift]:checked').value;
@@ -495,7 +502,7 @@ function data(){
 function problems(o){
   const p=[];
   if(!o.d) p.push('no hay días abiertos');
-  if(o.s.length!==2) p.push('elige 2 guarniciones');
+  if(plates.some(x=>x.length!==2)) p.push(plates.length>1?'elige 2 guarniciones en cada comida':'elige 2 guarniciones');
   if(!o.place) p.push('escribe el lugar de entrega');
   if(!o.name) p.push('escribe tu nombre');
   if(o.phone.replace(/\D/g,'').length<7) p.push('escribe tu WhatsApp');
@@ -505,13 +512,12 @@ function message(o){
   const t=o.shift==='m'?'Mañana 10:30':'Tarde 13:30';
   return `Hola Pa'llevar, quiero hacer un pedido:\n\n`+
     `Día: ${o.d?fd(o.d.date):'-'}\n`+
-    `${o.qty} x ${o.d?DISHES[o.d.dish].name:'-'} con ${o.s.map(x=>SIDES[x].toLowerCase()).join(' y ')||'-'}\n`+
+    combos().map(c=>`${c.n} x ${o.d?DISHES[o.d.dish].name:'-'} con ${c.s.map(x=>SIDES[x].toLowerCase()).join(' y ')||'-'}`).join('\n')+'\n'+
     `Entrega: ${t} · ${o.place||'-'}\n`+
     `Nombre: ${o.name||'-'}\nWhatsApp: ${o.phone||'-'}\n`+(o.notes?`Notas: ${o.notes}\n`:'')+
     `\nTotal: €${(o.qty*PRICE).toFixed(2)}`;
 }
 function update(){
-  lockSides();
   $('f-other').hidden=$('f-place').value!=='otro';
   const o=data();
   if(o.d){
@@ -519,7 +525,7 @@ function update(){
     $('sumPlate').innerHTML=plate(o.d.dish,o.s,'','Tu plato: '+DISHES[o.d.dish].name);
   } else { $('f-dish').innerHTML='<div><strong>Pedidos cerrados</strong><span>El menú de la próxima semana sale el fin de semana.</span></div>'; $('sumPlate').innerHTML=''; }
   $('qty').textContent=qty;
-  const rows=[['Día',o.d?fd(o.d.date):'—'],['Plato',o.d?`${o.qty} × ${DISHES[o.d.dish].name}`:'—'],['Guarniciones',o.s.map(x=>SIDES[x]).join(' + ')||'Elige 2'],['Entrega',(o.shift==='m'?'Mañana 10:30':'Tarde 13:30')],['Lugar',o.place||'—']];
+  const rows=[['Día',o.d?fd(o.d.date):'—'],['Plato',o.d?`${o.qty} × ${DISHES[o.d.dish].name}`:'—'],['Guarniciones',combos().map(c=>(plates.length>1?c.n+' × ':'')+(c.s.map(x=>SIDES[x]).join(' + ')||'faltan')).join(' · ')],['Entrega',(o.shift==='m'?'Mañana 10:30':'Tarde 13:30')],['Lugar',o.place||'—']];
   $('sumrows').innerHTML=rows.map(([a,b])=>`<div><span>${a}</span><span>${b.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</span></div>`).join('');
   $('total').textContent='€'+(o.qty*PRICE).toFixed(2);
   const bad=problems(o), btn=$('send');
@@ -530,8 +536,8 @@ function update(){
 $('form').addEventListener('input',update);
 $('form').addEventListener('change',update);
 $('form').addEventListener('submit',e=>e.preventDefault());
-$('inc').addEventListener('click',()=>{qty=Math.min(10,qty+1);update();});
-$('dec').addEventListener('click',()=>{qty=Math.max(1,qty-1);update();});
+$('inc').addEventListener('click',()=>{if(qty<10){qty++;plates.push(plates[plates.length-1].slice());renderSides();}update();});
+$('dec').addEventListener('click',()=>{if(qty>1){qty--;plates.pop();renderSides();}update();});
 $('send').addEventListener('click',e=>{
   const bad=problems(data());
   if(bad.length){e.preventDefault();$('err').textContent='Para mandar tu pedido falta: '+bad.join(', ')+'.';$('form').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});}
@@ -547,7 +553,7 @@ document.addEventListener('click',e=>{
   if(t.tagName==='BUTTON'){$('pedir').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}
 });
 
-function all(){W=week();$('heroPlate').innerHTML=plate((W.find(d=>d.open)||W[0]).dish,null,'big');renderWeek();renderDaily();fillDays();update();}
+function all(){W=week();$('heroPlate').innerHTML=plate((W.find(d=>d.open)||W[0]).dish,null,'big');renderWeek();renderDaily();fillDays();renderSides();update();}
 all();
 setInterval(()=>{const before=W.map(d=>d.open).join();W=week();if(W.map(d=>d.open).join()!==before){all();}else{renderDaily();}},30000);
 })();
